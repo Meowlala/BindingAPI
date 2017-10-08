@@ -1,3 +1,19 @@
+--[[ Blob that any mods using BindingAPI or anything dependent on BindingAPI will need to include
+local START_FUNC = start
+if BindingAPI then START_FUNC()
+else if not __bindingAPIInit then
+__bindingAPIInit={Mod = RegisterMod("BindingAPIRenderWarning", 1.0)}
+__bindingAPIInit.Mod:AddCallback(ModCallbacks.MC_POST_RENDER, function()
+	if not BindingAPI then
+		Isaac.RenderText("A mod requires Binding API to run, go get it on the workshop!", 100, 40, 255, 255, 255, 1)
+	end
+end) end
+__bindingAPIInit[#__bindingAPIInit+1]=START_FUNC end
+]]
+
+
+
+
 local mod = RegisterMod("Binding API", 1.0)
 BindingAPI = {
     CallbackRegister = {},
