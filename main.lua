@@ -1,3 +1,16 @@
+--[[ Blob that any mods using BindingAPI or anything dependent on BindingAPI will need to include
+local START_FUNC = start
+if BindingAPI then START_FUNC(BindingAPI)
+else if not __bindingAPIInit then
+__bindingAPIInit={Mod = RegisterMod("BindingAPIRenderWarning", 1.0)}
+__bindingAPIInit.Mod:AddCallback(ModCallbacks.MC_POST_RENDER, function()
+	if not BindingAPI then
+		Isaac.RenderText("A mod requires Binding API to run, go get it on the workshop!", 100, 40, 255, 255, 255, 1)
+	end
+end) end
+__bindingAPIInit[#__bindingAPIInit+1]=START_FUNC end
+]]
+
 local mod = RegisterMod("Binding API", 1.0)
 BindingAPI = {
     CallbackRegister = {},
@@ -84,7 +97,7 @@ BindingAPI.RegisterCallback("API_INIT", function(fn, ...) -- So that API_INIT is
     end
 
     if shouldCall then
-        callback.Function(id, apiVar)
+        fn(id, apiVar)
     end
 
     BindingAPI.AppendCallback("API_INIT", fn, ...)
@@ -119,6 +132,25 @@ end
 
 function BindingAPI.GetAPI(id)
     return BindingAPI.APIs[id]
+end
+
+function BindingAPI.CallIfAPI(apiID, funcName, ...)
+    if BindingAPI.APIs[id] and BindingAPI.APIs[id][funcName] then
+        return BindingAPI.APIs[id][funcName](...)
+    end
+end
+
+function BindingAPI.GetIfAPI(apiID, varName)
+    if BindingAPI.APIs[id] then
+        return BindingAPI.APIs[id][varName]
+    end
+end
+
+function BindingAPI.SetIfAPI(apiID, varName, setTo)
+    if BindingAPI.APIs[id] then
+        BindingAPI.APIs[id][varName] = setTo
+        return true
+    end
 end
 
 function BindingAPI.SetDependency(modName, ...) -- Sets up warnings for missing apis, takes mod name and any number of apis the mod is dependent on, ex BindingAPI.SetDependency("Devil's Harvest", "ProAPI", "SomeOtherAPI")
