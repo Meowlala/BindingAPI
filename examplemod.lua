@@ -20,7 +20,7 @@ local function start(api)
 end
 
 local START_FUNC = start
-if BindingAPI then START_FUNC()
+if BindingAPI then START_FUNC(BindingAPI)
 else if not __bindingAPIInit then
 __bindingAPIInit={Mod = RegisterMod("BindingAPIRenderWarning", 1.0)}
 __bindingAPIInit.Mod:AddCallback(ModCallbacks.MC_POST_RENDER, function()
