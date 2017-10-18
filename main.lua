@@ -28,7 +28,6 @@ end
 local myInst = MyClass("MyName")
 Isaac.DebugString(myInst.Name) -- Outputs "MyName"
 ]] -- NOT ACTUALLY USED, MAYBE MOVE TO SEPARATE HELPER API?
-
 function BindingAPI.Class()
     local newClass = {}
     setmetatable(newClass, {
@@ -54,15 +53,18 @@ end
 function BindingAPI.RegisterCallback(id, fn) -- Registers a callback's ID and function to be called when AddCallback is called with its ID, also retroactively calls on all previously defined callbacks with that id.
     BindingAPI.CallbackRegister[id] = fn
     if BindingAPI.Callbacks[id] then
-        local oldCallbacks = BindingAPI.Callbacks[id]
-        BindingAPI.Callbacks[id] = nil
-        for _, callback in ipairs(oldCallbacks) do
+        for _, callback in ipairs(BindingAPI.Callbacks[id]) do
             fn(callback.Function, unpack(callback.Parameters))
         end
+        BindingAPI.Callbacks[id] = nil
     end
 end
 
 function BindingAPI.GetCallbacks(id)
+    if not BindingAPI.Callbacks[id] then
+        BindingAPI.Callbacks[id] = {}
+    end
+
     return BindingAPI.Callbacks[id]
 end
 
@@ -85,19 +87,28 @@ function BindingAPI.AddCallback(id, fn, ...) -- The user adds a callback, which 
     end
 end
 
-BindingAPI.RegisterCallback("API_INIT", function(fn, ...) -- So that API_INIT is called if all needed apis were already published.
-    local parameters = {...}
+local function CheckAPIInitParams(parameters, justPublished)
     local shouldCall = true
+    local isWantedAPI = false
     if #parameters > 0 then
         for _, param in ipairs(parameters) do
             if not BindingAPI.APIs[param] then
                 shouldCall = false
             end
+
+            if justPublished and param == justPublished then
+                isWantedAPI = true
+            end
         end
     end
 
-    if shouldCall then
-        fn(id, apiVar)
+    return shouldCall and (isWantedAPI or not justPublished or #parameters == 0)
+end
+
+BindingAPI.RegisterCallback("API_INIT", function(fn, ...) -- So that API_INIT is called if all needed apis were already published.
+    local parameters = {...}
+    if CheckAPIInitParams(parameters) then
+        fn()
     end
 
     BindingAPI.AppendCallback("API_INIT", fn, ...)
@@ -106,25 +117,13 @@ end)
 function BindingAPI.PublishAPI(id, apiVar) -- An API would call this function with its name & api variable ex BindingAPI.PublishAPI("AlphaAPI", AlphaAPI). This means only one global variable is needed.
     BindingAPI.APIs[id] = apiVar
 
+    Isaac.DebugString("[BindingAPI] Published API " .. id)
+
     local initCallbacks = BindingAPI.GetCallbacks("API_INIT")
     if initCallbacks then
         for _, callback in ipairs(initCallbacks) do
-            local shouldCall = true
-            local isWantedAPI = false
-            if #callback.Parameters > 0 then
-                for _, param in ipairs(callback.Parameters) do
-                    if not BindingAPI.APIs[param] then
-                        shouldCall = false
-                    end
-
-                    if param == id then
-                        isWantedAPI = true
-                    end
-                end
-            end
-
-            if shouldCall and (isWantedAPI or #callback.Parameters == 0) then
-                callback.Function(id, apiVar)
+            if CheckAPIInitParams(callback.Parameters, id) then
+                callback.Function()
             end
         end
     end
