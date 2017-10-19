@@ -51,6 +51,17 @@ function BindingAPI.Class()
 end
 
 function BindingAPI.RegisterCallback(id, fn) -- Registers a callback's ID and function to be called when AddCallback is called with its ID, also retroactively calls on all previously defined callbacks with that id.
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to register callback: Callback ID isn't a string.");
+		return;
+	end
+	if ("function" ~= type(fn)) then
+		Isaac.DebugString("[Error] when trying to register callback " .. id .. ": No valid function passed!");
+		return;
+	end
+	if (nil ~= BindingAPI.Callbacks[id]) then
+		Isaac.DebugString("[Warn] Callback with the id " .. id .. " has already been registered. Overwriting.")
+	end
     BindingAPI.CallbackRegister[id] = fn
     if BindingAPI.Callbacks[id] then
         for _, callback in ipairs(BindingAPI.Callbacks[id]) do
@@ -61,14 +72,22 @@ function BindingAPI.RegisterCallback(id, fn) -- Registers a callback's ID and fu
 end
 
 function BindingAPI.GetCallbacks(id)
-    if not BindingAPI.Callbacks[id] then
-        BindingAPI.Callbacks[id] = {}
-    end
-
-    return BindingAPI.Callbacks[id]
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to get callbacks: Callback ID isn't a string.");
+		return;
+	end
+    return BindingAPI.Callbacks[id] or {}
 end
 
 function BindingAPI.AppendCallback(id, fn, ...)
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to append callback: Callback ID isn't a string.");
+		return;
+	end
+	if ("function" ~= type(fn)) then
+		Isaac.DebugString("[Error] when trying to append callback " .. id .. ": No valid function passed!");
+		return;
+	end
     if not BindingAPI.Callbacks[id] then
         BindingAPI.Callbacks[id] = {}
     end
@@ -80,6 +99,14 @@ function BindingAPI.AppendCallback(id, fn, ...)
 end
 
 function BindingAPI.AddCallback(id, fn, ...) -- The user adds a callback, which calls the function passed in when the callback was registered, which can handle adding to a list or such.
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to add callback: Callback ID isn't a string.");
+		return;
+	end
+	if ("function" ~= type(fn)) then
+		Isaac.DebugString("[Error] when trying to add callback " .. id .. ": No valid function passed!");
+		return;
+	end
     if BindingAPI.CallbackRegister[id] then
         BindingAPI.CallbackRegister[id](fn, ...)
     else
@@ -115,6 +142,13 @@ BindingAPI.RegisterCallback("API_INIT", function(fn, ...) -- So that API_INIT is
 end)
 
 function BindingAPI.PublishAPI(id, apiVar) -- An API would call this function with its name & api variable ex BindingAPI.PublishAPI("AlphaAPI", AlphaAPI). This means only one global variable is needed.
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to publish an API: API ID isn't a string.");
+		return;
+	end
+	if (nil == apiVar) then
+		Isaac.DebugString("[Warn] for " .. id .. ": API variable passed is nil!");
+	end
     BindingAPI.APIs[id] = apiVar
 
     Isaac.DebugString("[BindingAPI] Published API " .. id)
@@ -130,6 +164,13 @@ function BindingAPI.PublishAPI(id, apiVar) -- An API would call this function wi
 end
 
 function BindingAPI.GetAPI(id)
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to get an API: API ID isn't a string.");
+		return;
+	end
+	if (nil == BindingAPI.APIs[id]) then
+		Isaac.DebugString("[Warn] API " .. id .. " is nil.");
+	end
     return BindingAPI.APIs[id]
 end
 
@@ -153,6 +194,10 @@ function BindingAPI.SetIfAPI(apiID, varName, setTo)
 end
 
 function BindingAPI.SetDependency(modName, ...) -- Sets up warnings for missing apis, takes mod name and any number of apis the mod is dependent on, ex BindingAPI.SetDependency("Devil's Harvest", "ProAPI", "SomeOtherAPI")
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to set dependency: Mod ID isn't a string.");
+		return;
+	end
     BindingAPI.Dependencies[#BindingAPI.Dependencies + 1] = {
         Mod = modName,
         RequiredAPIs = {...}
