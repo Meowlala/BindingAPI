@@ -194,10 +194,6 @@ function BindingAPI.SetIfAPI(apiID, varName, setTo)
 end
 
 function BindingAPI.SetDependency(modName, ...) -- Sets up warnings for missing apis, takes mod name and any number of apis the mod is dependent on, ex BindingAPI.SetDependency("Devil's Harvest", "ProAPI", "SomeOtherAPI")
-	if ("string" ~= type(id)) then
-		Isaac.DebugString("[Error] when trying to set dependency: Mod ID isn't a string.");
-		return;
-	end
     BindingAPI.Dependencies[#BindingAPI.Dependencies + 1] = {
         Mod = modName,
         RequiredAPIs = {...}
