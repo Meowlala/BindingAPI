@@ -19,37 +19,6 @@ BindingAPI = {
     Dependencies = {}
 }
 
---[[ Class Constructor, EX
-local MyClass = BindingAPI.Class()
-function MyClass:Init(name)
-    self.Name = name
-end
-
-local myInst = MyClass("MyName")
-Isaac.DebugString(myInst.Name) -- Outputs "MyName"
-]] -- NOT ACTUALLY USED, MAYBE MOVE TO SEPARATE HELPER API?
-function BindingAPI.Class()
-    local newClass = {}
-    setmetatable(newClass, {
-        __call = function(tbl, ...)
-            local inst = {}
-            setmetatable(inst, {
-                __index = tbl
-            })
-            if inst.Init then
-                inst:Init(...)
-            end
-
-            if inst.PostInit then
-                inst:PostInit(...)
-            end
-
-            return inst
-        end
-    })
-    return newClass
-end
-
 function BindingAPI.RegisterCallback(id, fn) -- Registers a callback's ID and function to be called when AddCallback is called with its ID, also retroactively calls on all previously defined callbacks with that id.
 	if ("string" ~= type(id)) then
 		Isaac.DebugString("[Error] when trying to register callback: Callback ID isn't a string.");
