@@ -19,54 +19,44 @@ BindingAPI = {
     Dependencies = {}
 }
 
---[[ Class Constructor, EX
-local MyClass = BindingAPI.Class()
-function MyClass:Init(name)
-    self.Name = name
-end
-
-local myInst = MyClass("MyName")
-Isaac.DebugString(myInst.Name) -- Outputs "MyName"
-]] -- NOT ACTUALLY USED, MAYBE MOVE TO SEPARATE HELPER API?
-
-function BindingAPI.Class()
-    local newClass = {}
-    setmetatable(newClass, {
-        __call = function(tbl, ...)
-            local inst = {}
-            setmetatable(inst, {
-                __index = tbl
-            })
-            if inst.Init then
-                inst:Init(...)
-            end
-
-            if inst.PostInit then
-                inst:PostInit(...)
-            end
-
-            return inst
-        end
-    })
-    return newClass
-end
-
 function BindingAPI.RegisterCallback(id, fn) -- Registers a callback's ID and function to be called when AddCallback is called with its ID, also retroactively calls on all previously defined callbacks with that id.
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to register callback: Callback ID isn't a string.");
+		return;
+	end
+	if ("function" ~= type(fn)) then
+		Isaac.DebugString("[Error] when trying to register callback " .. id .. ": No valid function passed!");
+		return;
+	end
+	if (nil ~= BindingAPI.Callbacks[id]) then
+		Isaac.DebugString("[Warn] Callback with the id " .. id .. " has already been registered. Overwriting.")
+	end
     BindingAPI.CallbackRegister[id] = fn
     if BindingAPI.Callbacks[id] then
-        local oldCallbacks = BindingAPI.Callbacks[id]
-        BindingAPI.Callbacks[id] = nil
-        for _, callback in ipairs(oldCallbacks) do
+        for _, callback in ipairs(BindingAPI.Callbacks[id]) do
             fn(callback.Function, unpack(callback.Parameters))
         end
+        BindingAPI.Callbacks[id] = nil
     end
 end
 
 function BindingAPI.GetCallbacks(id)
-    return BindingAPI.Callbacks[id]
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to get callbacks: Callback ID isn't a string.");
+		return;
+	end
+    return BindingAPI.Callbacks[id] or {}
 end
 
 function BindingAPI.AppendCallback(id, fn, ...)
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to append callback: Callback ID isn't a string.");
+		return;
+	end
+	if ("function" ~= type(fn)) then
+		Isaac.DebugString("[Error] when trying to append callback " .. id .. ": No valid function passed!");
+		return;
+	end
     if not BindingAPI.Callbacks[id] then
         BindingAPI.Callbacks[id] = {}
     end
@@ -78,6 +68,14 @@ function BindingAPI.AppendCallback(id, fn, ...)
 end
 
 function BindingAPI.AddCallback(id, fn, ...) -- The user adds a callback, which calls the function passed in when the callback was registered, which can handle adding to a list or such.
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to add callback: Callback ID isn't a string.");
+		return;
+	end
+	if ("function" ~= type(fn)) then
+		Isaac.DebugString("[Error] when trying to add callback " .. id .. ": No valid function passed!");
+		return;
+	end
     if BindingAPI.CallbackRegister[id] then
         BindingAPI.CallbackRegister[id](fn, ...)
     else
@@ -85,52 +83,63 @@ function BindingAPI.AddCallback(id, fn, ...) -- The user adds a callback, which 
     end
 end
 
-BindingAPI.RegisterCallback("API_INIT", function(fn, ...) -- So that API_INIT is called if all needed apis were already published.
-    local parameters = {...}
+local function CheckAPIInitParams(parameters, justPublished)
     local shouldCall = true
+    local isWantedAPI = false
     if #parameters > 0 then
         for _, param in ipairs(parameters) do
             if not BindingAPI.APIs[param] then
                 shouldCall = false
             end
+
+            if justPublished and param == justPublished then
+                isWantedAPI = true
+            end
         end
     end
 
-    if shouldCall then
-        fn(id, apiVar)
+    return shouldCall and (isWantedAPI or not justPublished or #parameters == 0)
+end
+
+BindingAPI.RegisterCallback("API_INIT", function(fn, ...) -- So that API_INIT is called if all needed apis were already published.
+    local parameters = {...}
+    if CheckAPIInitParams(parameters) then
+        fn()
     end
 
     BindingAPI.AppendCallback("API_INIT", fn, ...)
 end)
 
 function BindingAPI.PublishAPI(id, apiVar) -- An API would call this function with its name & api variable ex BindingAPI.PublishAPI("AlphaAPI", AlphaAPI). This means only one global variable is needed.
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to publish an API: API ID isn't a string.");
+		return;
+	end
+	if (nil == apiVar) then
+		Isaac.DebugString("[Warn] for " .. id .. ": API variable passed is nil!");
+	end
     BindingAPI.APIs[id] = apiVar
+
+    Isaac.DebugString("[BindingAPI] Published API " .. id)
 
     local initCallbacks = BindingAPI.GetCallbacks("API_INIT")
     if initCallbacks then
         for _, callback in ipairs(initCallbacks) do
-            local shouldCall = true
-            local isWantedAPI = false
-            if #callback.Parameters > 0 then
-                for _, param in ipairs(callback.Parameters) do
-                    if not BindingAPI.APIs[param] then
-                        shouldCall = false
-                    end
-
-                    if param == id then
-                        isWantedAPI = true
-                    end
-                end
-            end
-
-            if shouldCall and (isWantedAPI or #callback.Parameters == 0) then
-                callback.Function(id, apiVar)
+            if CheckAPIInitParams(callback.Parameters, id) then
+                callback.Function()
             end
         end
     end
 end
 
 function BindingAPI.GetAPI(id)
+	if ("string" ~= type(id)) then
+		Isaac.DebugString("[Error] when trying to get an API: API ID isn't a string.");
+		return;
+	end
+	if (nil == BindingAPI.APIs[id]) then
+		Isaac.DebugString("[Warn] API " .. id .. " is nil.");
+	end
     return BindingAPI.APIs[id]
 end
 
